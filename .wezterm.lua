@@ -1,22 +1,54 @@
 -- Pull in the wezterm API
 local wezterm = require 'wezterm'
 
--- see https://github.com/danielcopper/wezterm-session-manager
-local session_manager = require("wezterm-session-manager/session-manager")
-wezterm.on("save_session", function(window) session_manager.save_state(window) end)
-wezterm.on("load_session", function(window) session_manager.load_state(window) end)
-wezterm.on("restore_session", function(window) session_manager.restore_state(window) end)
-
 local act = wezterm.action
 -- This will hold the configuration.
 local config = wezterm.config_builder()
 
+-- setup wezterm for WSL
+config.default_domain = 'WSL:Ubuntu-20.04'
+
+
 -- setup leader key
 config.leader = { key = 'a', mods = 'CTRL', timeout_milliseconds = 1000 }
 
+-- copy to clipboard selected text by Enter
+local copy_mode = wezterm.gui.default_key_tables().copy_mode
+table.insert(copy_mode, {
+  key = 'Enter',
+  mods = 'NONE',
+  action = act.Multiple {
+    { CopyTo = 'ClipboardAndPrimarySelection' },
+    act.ClearSelection,
+    act.CopyMode 'Close',
+  },
+})
+config.key_tables = { copy_mode = copy_mode }
 
 -- This is where you actually apply your config choices.
 config.keys = {
+-- disable enter when text is selected
+{
+    key = 'Enter',
+    mods = 'NONE',
+    action = wezterm.action_callback(function(window, pane)
+      -- 1. Grab any currently selected text from the pane
+      local selection = window:get_selection_text_for_pane(pane)
+      -- 2. Check if the selection exists and isn't empty
+      if selection and selection ~= "" then
+        -- Text IS selected! 
+        -- We do nothing here, which effectively blocks the 'Enter' key.
+        window:perform_action(act.CopyTo 'ClipboardAndPrimarySelection', pane)
+        window:perform_action(act.ClearSelection, pane)        
+        return 
+      else
+        -- 3. No text is selected, so we pass the 'Enter' key through to the terminal normally.
+        window:perform_action(wezterm.action.SendKey { key = 'Enter' }, pane)
+      end
+    end),
+  },
+
+
   -- paste from the clipboard
   { key = 'V', mods = 'CTRL', action = act.PasteFrom 'Clipboard' },
 
@@ -55,8 +87,12 @@ config.mouse_bindings = {
     mods = 'NONE',
     action = act.PasteFrom 'PrimarySelection',
   },
+  {
+    event = { Down = { streak = 1, button = 'Right' } },
+    mods = 'SHIFT',
+    action = act.PasteFrom 'Clipboard',
+  },
 }
-
 
 
 -- For example, changing the initial geometry for new windows:
