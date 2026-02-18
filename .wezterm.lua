@@ -6,7 +6,7 @@ local act = wezterm.action
 local config = wezterm.config_builder()
 
 -- setup wezterm for WSL
-config.default_domain = 'WSL:Ubuntu-20.04'
+-- config.default_domain = 'WSL:Ubuntu-20.04'
 
 
 -- setup leader key
@@ -54,10 +54,6 @@ config.keys = {
 
   -- paste from the primary selection
   { key = 'V', mods = 'CTRL', action = act.PasteFrom 'PrimarySelection' },
-
-   {key = "S", mods = "LEADER", action = wezterm.action{EmitEvent = "save_session"}},
-   {key = "L", mods = "LEADER", action = wezterm.action{EmitEvent = "load_session"}},
-   {key = "R", mods = "LEADER", action = wezterm.action{EmitEvent = "restore_session"}},
 
   {
     key = '|',
